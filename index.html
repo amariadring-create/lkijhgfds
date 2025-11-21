@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم الماب</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        }
+        h1 { color: #00ff88; margin-bottom: 10px; }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            background: #333;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .player-row {
+            background: #444;
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #00ff88;
+        }
+        button.kick-btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        button.kick-btn:hover { background: #cc0000; }
+        .loading { color: #888; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>⚡ لوحة التحكم بالماب</h1>
+        
+        <div class="stats">
+            <div>اللاعبين المتصلين: <span id="playerCount" style="color:#00ff88">0</span></div>
+            <div>الحد الأقصى: <span id="maxPlayers">0</span></div>
+        </div>
+
+        <h3>قائمة اللاعبين:</h3>
+        <div id="playerList">
+            <p class="loading">جاري انتظار الاتصال من الماب...</p>
+        </div>
+    </div>
+
+    <script>
+        const SECRET_KEY = "123456"; // نفس الرقم السري اللي في الماب
+
+        // دالة لجلب البيانات وتحديث الـ HTML
+        async function refreshData() {
+            try {
+                const response = await fetch('/data'); // طلب البيانات من السيرفر
+                const data = await response.json();
+
+                // تحديث الأرقام
+                document.getElementById('playerCount').innerText = data.players.length;
+                document.getElementById('maxPlayers').innerText = data.serverStats.max;
+
+                // تحديث القائمة
+                const list = document.getElementById('playerList');
+                list.innerHTML = ""; 
+
+                if(data.players.length === 0) {
+                    list.innerHTML = "<p style='color:gray'>لا يوجد لاعبين حالياً</p>";
+                }
+
+                data.players.forEach(player => {
+                    const div = document.createElement('div');
+                    div.className = 'player-row';
+                    div.innerHTML = `
+                        <span>👤 ${player}</span>
+                        <button class="kick-btn" onclick="kickPlayer('${player}')">طرد (Kick)</button>
+                    `;
+                    list.appendChild(div);
+                });
+
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        }
+
+        // دالة إرسال أمر الطرد
+        async function kickPlayer(username) {
+            if(confirm(`هل أنت متأكد من طرد اللاعب ${username}؟`)) {
+                await fetch('/command', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        key: SECRET_KEY,
+                        type: 'kick', 
+                        target: username 
+                    })
+                });
+                alert('تم إرسال الأمر! سيتم تنفيذه خلال 5 ثواني.');
+            }
+        }
+
+        // تحديث البيانات كل ثانية
+        setInterval(refreshData, 1000);
+        refreshData();
+    </script>
+
+</body>
+</html>
